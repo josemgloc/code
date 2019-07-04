@@ -8,7 +8,7 @@ Bash script that allows to execute any aws cli query in all profiles configured 
 ## aws_
 Bash script that allows to search in all profiles configured and all regions:
 
-** Options: **
+**Options:**
 
 * list-profiles - List all configured profiles.
 * list-accounts-ids - List all accounts ids.
