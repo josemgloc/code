@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Functions
+list-regions() {
+  aws ec2 describe-regions --query "Regions[].{Name:RegionName}" --output text
+}
+
+list-profiles() {
+  while IFS= read -r line
+  do
+    echo "${line:1:${#line}-2}" | grep profile | cut -d" " -f2
+  done < ~/.aws/config  
+}
+
+for PROFILE in $(list-profiles); do
+
+  echo -e "\n +++ Profile: ${PROFILE}"
+    
+  for REGION in $(list-regions); do
+
+  	  echo "+ Region: ${REGION}"
+      aws $@ --profile ${PROFILE} --region ${REGION}
+
+  done
+
+done

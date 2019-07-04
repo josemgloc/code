@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# Variables
+COMMANDS=(
+  "list-profiles"
+  "list-accounts-ids"
+  "list-key-pairs"
+  "list-ec2-instances-ids"
+  "list-ec2-private-ips"
+  "list-ec2-public-ips"
+  "list-ec2-eips"
+  "search-private-ip"
+  "search-public-ip"
+  "help")
+
+# Functions
+function print-usage {
+  echo -e "
+  Amazon Web Services all account search ( Default: all profiles & all regions )
+
+  + Usage: $(basename $0) <command> [parameters]
+  + Commands:
+  "
+
+  for COMMAND in ${COMMANDS[@]}; do
+    echo -e "\t${COMMAND}"
+  done
+
+  echo -e "
+  * You need AWS acount/s full access privileges to run this script
+  "
+}
+
+list-regions() {
+  aws ec2 describe-regions --query "Regions[].{Name:RegionName}" --output text
+}
+
+list-profiles() {
+  while IFS= read -r line
+  do
+    echo "${line:1:${#line}-2}" | grep profile | cut -d" " -f2
+  done < ~/.aws/config  
+}
+
+all_() {
+  for PROFILE in $(list-profiles); do
+
+    for REGION in $(list-regions); do
+
+      OUTPUT=$(aws $1 --profile ${PROFILE} --region ${REGION} | $2)
+      for LINE in ${OUTPUT}; do
+          echo "${LINE}" | xargs echo "${PROFILE} : ${REGION} :"
+      done
+
+    done
+
+  done
+}
+
+# Main
+case $1 in
+
+"${COMMANDS[0]}")
+  list-profiles
+  ;;
+
+"${COMMANDS[1]}")
+  for PROFILE in $(list-profiles); do
+      echo "${PROFILE}" | xargs aws sts get-caller-identity --query "Account" --output text --profile | xargs echo "${PROFILE} :"
+  done
+  ;;
+
+"${COMMANDS[2]}")
+  all_ "ec2 describe-key-pairs" "jq -r .KeyPairs[].KeyName"
+  ;;
+
+"${COMMANDS[3]}")
+  all_ "ec2 describe-instances" "jq -r .Reservations[].Instances[].InstanceId"
+  ;;
+
+"${COMMANDS[4]}")
+  all_ "ec2 describe-network-interfaces" "jq -r .NetworkInterfaces[].PrivateIpAddress"
+  ;;
+
+"${COMMANDS[5]}")
+  all_ "ec2 describe-network-interfaces" "jq -r .NetworkInterfaces[].Association.PublicIp"
+  ;;
+
+"${COMMANDS[6]}")
+  all_ "ec2 describe-addresses" "jq -r .Addresses[].PublicIp"
+  ;;
+
+"${COMMANDS[7]}")
+  if [[ -z $2 ]]; then
+    echo "Add IP please!"
+    exit 1
+  else
+    $(basename $0) ${COMMANDS[4]} | grep $2
+  fi
+  ;;
+
+"${COMMANDS[8]}")
+  if [[ -z $2 ]]; then
+    echo "Add IP please!"
+    exit 1
+  else
+    $(basename $0) ${COMMANDS[5]} | grep $2
+    $(basename $0) ${COMMANDS[6]} | grep $2
+  fi
+  ;;
+
+"${COMMANDS[9]}")
+  print-usage
+  ;;
+
+*)
+  print-usage
+  exit 2
+  ;;
+
+esac
