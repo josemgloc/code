@@ -1,2 +1,2 @@
-# code
-Public code
+# Code
+Some code I want to share.
